@@ -806,8 +806,29 @@
 
           var expandRow = tbody.querySelector('tr.expand-row[data-expand-id="' + id + '"]');
           var isOpen = expandRow.classList.contains('open');
-          tbody.querySelectorAll('tr.expand-row.open').forEach(function(er) { er.classList.remove('open'); });
-          if (!isOpen) expandRow.classList.add('open');
+
+          // Close any other open row first -- an inline max-height (set when
+          // it was opened) would otherwise override the CSS collapse rule and
+          // leave it stuck visually open even after the class is removed.
+          tbody.querySelectorAll('tr.expand-row.open').forEach(function(er) {
+            if (er === expandRow) return;
+            var otherBody = er.querySelector('.expand-body');
+            if (otherBody) otherBody.style.maxHeight = '0px';
+            er.classList.remove('open');
+          });
+
+          var body = expandRow.querySelector('.expand-body');
+          if (!isOpen) {
+            expandRow.classList.add('open');
+            // scrollHeight reflects the row's natural open-state height
+            // (padding included, since the 'open' class is already applied)
+            // even while still clipped by max-height:0 -- reading it forces
+            // the layout the transition then animates from.
+            body.style.maxHeight = body.scrollHeight + 'px';
+          } else {
+            body.style.maxHeight = '0px';
+            expandRow.classList.remove('open');
+          }
 
           map.flyTo({ center: [lng, lat], zoom: 8, speed: 1.2 });
 

@@ -363,7 +363,7 @@ html, body {
 .table-scroll::-webkit-scrollbar-thumb,
 .metrics-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
 #incidentTable thead th {
   position: sticky;
@@ -409,16 +409,16 @@ table { width: 100%; border-collapse: collapse; }
 }
 
 /* Per-column widths — date fixed; target/tactic/venue medium; location expands */
-#incidentTable th:nth-child(1),
-#incidentTable td:nth-child(1) { width: 110px; min-width: 110px; }
-#incidentTable th:nth-child(2),
-#incidentTable td:nth-child(2) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(3),
-#incidentTable td:nth-child(3) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(4),
-#incidentTable td:nth-child(4) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(5),
-#incidentTable td:nth-child(5) { width: auto; min-width: 180px; }
+#incidentTable th:nth-child(1) { width: 110px; min-width: 110px; }
+#incidentTable tbody tr.main-row td:nth-child(1) { width: 110px; min-width: 110px; }
+#incidentTable th:nth-child(2) { width: 150px; min-width: 130px; }
+#incidentTable tbody tr.main-row td:nth-child(2) { width: 150px; min-width: 130px; }
+#incidentTable th:nth-child(3) { width: 150px; min-width: 130px; }
+#incidentTable tbody tr.main-row td:nth-child(3) { width: 150px; min-width: 130px; }
+#incidentTable th:nth-child(4) { width: 150px; min-width: 130px; }
+#incidentTable tbody tr.main-row td:nth-child(4) { width: 150px; min-width: 130px; }
+#incidentTable th:nth-child(5) { width: auto; min-width: 180px; }
+#incidentTable tbody tr.main-row td:nth-child(5) { width: auto; min-width: 180px; }
 
 .placeholder-row td {
   color: var(--text-muted);
@@ -509,19 +509,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* ── Expandable rows ─────────────────────────────────────────────────────── */
-.expand-row { display: none; }
-.expand-row.open { display: table-row; }
-
+/* Always a real row (no display:none) so the height/opacity transitions below
+   can animate smoothly instead of snapping open. */
 .expand-row td {
-  padding: 0 !important;
-  border-bottom: 2px solid var(--accent) !important;
+  padding: 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color .32s ease;
+}
+
+.expand-row.open td {
+  border-bottom: 2px solid var(--accent);
 }
 
 .expand-body {
-  padding: 12px 16px 14px 16px;
+  padding: 0 16px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
   background: var(--surface-2);
   display: flex;
   gap: 24px;
+  transition: max-height .32s cubic-bezier(.4, 0, .2, 1), opacity .22s ease, padding .32s cubic-bezier(.4, 0, .2, 1);
+}
+
+.expand-row.open .expand-body {
+  padding: 12px 16px 14px 16px;
+  opacity: 1;
+  /* max-height is set inline by JS to the content's exact scrollHeight,
+     so the slide distance/timing always matches how much content there is. */
 }
 
 .expand-section {
@@ -562,6 +577,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   text-align: center;
   vertical-align: middle;
   background: var(--surface-2);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .32s ease;
+}
+
+.expand-row.open .expand-source-cell {
+  max-height: 200px;
   border-left: 1px solid var(--border);
 }
 
