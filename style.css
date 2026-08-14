@@ -577,13 +577,28 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   text-align: center;
   vertical-align: middle;
   background: var(--surface-2);
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height .32s ease;
+  padding: 0;
 }
 
-.expand-row.open .expand-source-cell {
+/* max-height/overflow on a <td> itself is unreliable across browsers (table
+   cells size via the table layout algorithm, not the normal box model), so
+   the collapse/expand happens on this inner block div instead -- the cell
+   just sizes to fit whatever height this div actually renders at. */
+.expand-source-inner {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  transition: max-height .32s ease, opacity .22s ease, padding .32s ease;
+}
+
+.expand-row.open .expand-source-inner {
   max-height: 200px;
+  opacity: 1;
+  padding: 12px 8px;
   border-left: 1px solid var(--border);
 }
 
