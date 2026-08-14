@@ -1,0 +1,134 @@
+{
+  "$comment": "Schema for the TorchStone Executive Protection dashboard. Mirrors the SEA dashboard's schema.json as a design/reference document -- index.html is hand-built to match this shape (the shell is not a runtime schema loader), so treat this file as the source of truth to keep code and config in sync when the dataset evolves.",
+
+  "meta": {
+    "title": "Executive Protection Incident Map",
+    "subtitle": "TorchStone Global",
+    "logo": "assets/torchstone-mark.svg"
+  },
+
+  "dataSource": {
+    "type": "csv",
+    "encoding": "utf-8-sig",
+    "files": [
+      { "id": "EP", "path": "EPdata.csv", "label": "Executive Protection" }
+    ],
+    "$comment": "Single global dataset -- no country split, so the SEA-style multi-source country-nav + dimmed background layers are dropped entirely rather than configured with one entry."
+  },
+
+  "columns": [
+    { "name": "Date",           "type": "date",   "required": true, "format": "DD Month YYYY" },
+    { "name": "Location",       "type": "text",   "required": false, "$comment": "Derived during export from City, State/Province, Country -- not a raw XLSX column." },
+    { "name": "City",           "type": "text",   "required": false },
+    { "name": "Country",        "type": "text",   "required": true },
+    { "name": "Domestic/Int'l", "type": "text",   "required": false },
+    { "name": "Latitude",       "type": "number", "required": true, "range": [-90, 90] },
+    { "name": "Longitude",      "type": "number", "required": true, "range": [-180, 180] },
+    { "name": "Target",         "type": "text",   "required": true, "vocab": "vocab/target.json" },
+    { "name": "Tactic",         "type": "text",   "required": true, "vocab": "vocab/tactic.json" },
+    { "name": "Venue",          "type": "text",   "required": true, "vocab": "vocab/venue.json" },
+    { "name": "Content",        "type": "text",   "required": false },
+    { "name": "Source",         "type": "text",   "required": false }
+  ],
+
+  "map": {
+    "basemap": "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    "initialView": { "center": [-98.5, 39.8], "zoom": 3.3, "minZoom": 2, "maxZoom": 16 },
+    "defaultFocus": { "column": "Country", "value": "USA", "$comment": "On load, the map fits bounds to USA rows (largest share of the sample data) while still plotting all global incidents." },
+    "clustering": { "enabled": false }
+  },
+
+  "layers": [
+    {
+      "type": "categorical-points",
+      "id": "target",
+      "label": "Target",
+      "column": "Target",
+      "colorMap": {
+        "Local Government": "#4d90c4",
+        "Celebrity": "#e91e63",
+        "Federal Government": "#2b7fd4",
+        "State Government": "#00b0a0",
+        "Business Executive": "#e8962a",
+        "Community Leader": "#9b59b6"
+      },
+      "defaultColor": "#8b949e",
+      "popupFields": ["Date", "Tactic", "Venue", "Location"]
+    },
+    {
+      "type": "categorical-points",
+      "id": "tactic",
+      "label": "Tactic",
+      "column": "Tactic",
+      "colorMap": {
+        "Verbal/Written Threat": "#c8a800",
+        "Harassment": "#ff9900",
+        "Attack": "#e53935",
+        "Stalking": "#9b59b6",
+        "Other Crime": "#00acc1"
+      },
+      "$comment": "'Other Crime' has zero current incidents in the sample data but is pre-defined here so it appears in filters/legend/table pills as soon as it's used.",
+      "defaultColor": "#8b949e",
+      "popupFields": ["Date", "Target", "Venue", "Location"]
+    },
+    {
+      "type": "categorical-points",
+      "id": "venue",
+      "label": "Venue",
+      "column": "Venue",
+      "colorMap": {
+        "Office": "#4d90c4",
+        "Home": "#00b050",
+        "Public Area": "#e8962a",
+        "Communication Channels": "#cc00cc",
+        "Restricted Area": "#e53935"
+      },
+      "defaultColor": "#8b949e",
+      "popupFields": ["Date", "Target", "Tactic", "Location"]
+    },
+    {
+      "type": "metrics",
+      "id": "metrics",
+      "label": "Metrics",
+      "$comment": "Rendered as an always-visible bottom-left panel (not a map-toggle tab, unlike SEA), split from the map by its own adjustable divider. Unlike SEA's fixed chart list, this is a single vertical (stacked) bar chart with one user-facing selector: 'Break down by' (inline with the chart title), which adds an optional second dimension -- stacked segments colored by that field's own color map. The x-axis grouping is NOT a separate control; it always mirrors whichever map layer tab is currently active (Target/Tactic/Venue). Both the implicit group-by and the breakdown selector are restricted to those three categorical layers. The chart canvas has a repeating diagonal TorchStone Global watermark tiled across the plot area background (low opacity, drawn behind the bars) and a small icon-only Copy button pinned to the card's top-right corner that copies the chart image to the clipboard (falls back to a PNG download if the browser doesn't support clipboard image writes).",
+      "chartKind": "vert-bar-configurable",
+      "groupBy": "implicit -- always equals the active map layer",
+      "breakByOptions": ["None", "Target", "Tactic", "Venue"],
+      "defaultBreakBy": "None"
+    },
+    {
+      "type": "metrics-builder",
+      "id": "builder",
+      "label": "Metrics Builder",
+      "$comment": "4th layer tab. Unlike the other three, selecting it replaces BOTH the map and the single metrics chart with one full-height panel (the map/metrics divider is hidden too) -- it is not a map coloring layer. Lets the user build an open-ended grid of charts (2 per row, capped grid with scroll) instead of the single fixed metrics chart. Each chart has its own Chart Type / X Axis / Break Down By selection, chosen from all five categorical fields (Target, Tactic, Venue, Country, Domestic/Int'l) -- a superset of the three the map/metrics chart is restricted to. Y axis is shown as a fixed, disabled 'Count of Incidents' label rather than a real selector, since this dataset has no numeric measure column (unlike SEA's Arms Score) for a Y axis to meaningfully choose between. Charts respect the current table filters (date range, multi-selects, search) and re-render when they change, but only while this panel is actually visible (rebuilding a Chart.js canvas inside a display:none container sizes it to zero). Nothing here persists across a page reload by design -- the grid resets each session.",
+      "chartTypes": [
+        { "value": "vbar", "label": "Vertical Bar", "breakdownAllowed": false },
+        { "value": "hbar", "label": "Horizontal Bar", "breakdownAllowed": false },
+        { "value": "sbar", "label": "Stacked Bar", "breakdownAllowed": true },
+        { "value": "pie", "label": "Pie", "breakdownAllowed": false },
+        { "value": "line", "label": "Line (over time)", "breakdownAllowed": true, "xAxisFixed": "Date, bucketed by month" }
+      ],
+      "xAxisOptions": ["Target", "Tactic", "Venue", "Country", "Domestic/Int'l"],
+      "yAxis": "Count of Incidents (fixed -- no numeric measure column exists in this dataset)",
+      "cardActions": ["Copy (icon, top-right)", "Delete (icon, top-right)"],
+      "gridLayout": "2 columns, wraps/scrolls beyond that"
+    }
+  ],
+
+  "table": {
+    "columns": ["Date", "Target", "Tactic", "Venue", "Location"],
+    "expandFields": ["Content"],
+    "sourceColumn": "Source"
+  },
+
+  "filters": {
+    "dateColumn": "Date",
+    "search": ["Content", "City", "Country", "Target", "Tactic", "Venue"],
+    "multiSelect": [
+      { "column": "Target",  "deriveFrom": "vocab", "vocab": "vocab/target.json", "label": "Target" },
+      { "column": "Tactic",  "deriveFrom": "vocab", "vocab": "vocab/tactic.json", "label": "Tactic" },
+      { "column": "Venue",   "deriveFrom": "vocab", "vocab": "vocab/venue.json",  "label": "Venue" },
+      { "column": "Country", "deriveFrom": "data",  "label": "Country" }
+    ]
+  }
+}

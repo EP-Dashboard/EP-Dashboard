@@ -1,0 +1,10 @@
+{
+  "$comment": "Controlled vocabulary for the Venue column. Single source of truth for the Venue map layer's color map, the map legend, and the Venue filter dropdown.",
+  "values": [
+    "Office",
+    "Home",
+    "Public Area",
+    "Communication Channels",
+    "Restricted Area"
+  ]
+}

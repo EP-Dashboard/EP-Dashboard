@@ -1,0 +1,10 @@
+{
+  "$comment": "Controlled vocabulary for the Tactic column. Single source of truth for the Tactic map layer's color map, the map legend, and the Tactic filter dropdown. 'Other Crime' currently has zero incidents in the dataset but is included here so it appears in filters/legend/table as soon as it's used.",
+  "values": [
+    "Verbal/Written Threat",
+    "Harassment",
+    "Attack",
+    "Stalking",
+    "Other Crime"
+  ]
+}

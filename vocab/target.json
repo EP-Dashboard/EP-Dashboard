@@ -1,0 +1,11 @@
+{
+  "$comment": "Controlled vocabulary for the Target column. Single source of truth for the Target map layer's color map, the map legend, and the Target filter dropdown.",
+  "values": [
+    "Local Government",
+    "Celebrity",
+    "Federal Government",
+    "State Government",
+    "Business Executive",
+    "Community Leader"
+  ]
+}
