@@ -408,17 +408,29 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   color: var(--text);
 }
 
-/* Per-column widths — date fixed; target/tactic/venue medium; location expands */
-#incidentTable th:nth-child(1) { width: 110px; min-width: 110px; }
-#incidentTable tbody tr.main-row td:nth-child(1) { width: 110px; min-width: 110px; }
-#incidentTable th:nth-child(2) { width: 150px; min-width: 130px; }
-#incidentTable tbody tr.main-row td:nth-child(2) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(3) { width: 150px; min-width: 130px; }
-#incidentTable tbody tr.main-row td:nth-child(3) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(4) { width: 150px; min-width: 130px; }
-#incidentTable tbody tr.main-row td:nth-child(4) { width: 150px; min-width: 130px; }
-#incidentTable th:nth-child(5) { width: auto; min-width: 180px; }
-#incidentTable tbody tr.main-row td:nth-child(5) { width: auto; min-width: 180px; }
+/* Badge cells hand truncation off to the badge itself (see .type-badge)
+   instead of clipping through it -- clipping at the cell level was slicing
+   through the pill's colored background and leaving a stray ellipsis
+   floating outside it. */
+#incidentTable tbody td.has-badge {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Per-column widths as percentages (not fixed px) so columns scale with the
+   panel's actual width instead of a hard floor -- widened Target/Tactic/
+   Venue so pill text has room to breathe. table-layout:fixed (set above)
+   keeps these stable regardless of what's in the expand row. */
+#incidentTable th:nth-child(1) { width: 10%; }
+#incidentTable tbody tr.main-row td:nth-child(1) { width: 10%; }
+#incidentTable th:nth-child(2) { width: 19%; }
+#incidentTable tbody tr.main-row td:nth-child(2) { width: 19%; }
+#incidentTable th:nth-child(3) { width: 20%; }
+#incidentTable tbody tr.main-row td:nth-child(3) { width: 20%; }
+#incidentTable th:nth-child(4) { width: 18%; }
+#incidentTable tbody tr.main-row td:nth-child(4) { width: 18%; }
+#incidentTable th:nth-child(5) { width: 33%; }
+#incidentTable tbody tr.main-row td:nth-child(5) { width: 33%; }
 
 .placeholder-row td {
   color: var(--text-muted);
@@ -430,6 +442,8 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 /* ── Type badge ──────────────────────────────────────────────────────────── */
 .type-badge {
   display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 2px 7px;
   border-radius: 2px;
   font-family: var(--font-ui);
@@ -438,6 +452,10 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   font-weight: 500;
   text-transform: uppercase;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 /* ── Filter bar ──────────────────────────────────────────────────────────── */

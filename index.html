@@ -799,7 +799,7 @@
         var val = row[field] || '--';
         if (fieldKey === activeLayer) {
           var color = colorFor(fieldKey, row[field]);
-          return '<td><span class="type-badge" style="background:' + color + '">' + escHtml(val) + '</span></td>';
+          return '<td class="has-badge"><span class="type-badge" style="background:' + color + '">' + escHtml(val) + '</span></td>';
         }
         return '<td>' + escHtml(val) + '</td>';
       }
