@@ -738,6 +738,50 @@
       return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Robust expand/collapse: display:none is the only way to guarantee a
+    // fully closed row takes up zero space (max-height/overflow tricks alone
+    // can leave a residual sliver in some browsers). JS toggles display via
+    // inline style, only using table-row while a row is open or animating.
+    function openExpandRow(expandRow) {
+      var body = expandRow.querySelector('.expand-body');
+      expandRow.style.display = 'table-row';
+      // Force a layout flush so the browser registers the closed (0) state
+      // before we change it -- otherwise the transition can get skipped.
+      void body.offsetHeight;
+      body.style.maxHeight = body.scrollHeight + 'px';
+      expandRow.classList.add('open');
+
+      function onEnd(e) {
+        if (e.target !== body || e.propertyName !== 'max-height') return;
+        // Release the fixed height once open, so later reflows (a web font
+        // finishing loading, a window resize, etc.) can never clip content
+        // that was measured before they happened.
+        body.style.maxHeight = 'none';
+        body.removeEventListener('transitionend', onEnd);
+      }
+      body.addEventListener('transitionend', onEnd);
+    }
+
+    function closeExpandRow(expandRow) {
+      var body = expandRow.querySelector('.expand-body');
+      if (!expandRow.classList.contains('open')) { expandRow.style.display = 'none'; return; }
+
+      // max-height may currently be 'none' (released after opening) -- pin
+      // it to an explicit pixel value first so there's something concrete
+      // to animate down from.
+      body.style.maxHeight = body.scrollHeight + 'px';
+      void body.offsetHeight;
+      body.style.maxHeight = '0px';
+      expandRow.classList.remove('open');
+
+      function onEnd(e) {
+        if (e.target !== body || e.propertyName !== 'max-height') return;
+        expandRow.style.display = 'none';
+        body.removeEventListener('transitionend', onEnd);
+      }
+      body.addEventListener('transitionend', onEnd);
+    }
+
     function renderTable(rows) {
       var tbody = document.getElementById('tableBody');
       document.getElementById('tableCount').textContent = rows.length + ' incident' + (rows.length !== 1 ? 's' : '');
@@ -760,6 +804,20 @@
         return '<td>' + escHtml(val) + '</td>';
       }
 
+      function sourceHtml(src) {
+        if (!src) return '';
+        var isUrl = /^https?:\/\//i.test(src.trim());
+        if (isUrl) {
+          return '<div class="expand-source">' +
+            '<a href="' + escHtml(src.trim()) + '" target="_blank" rel="noopener" class="expand-source-icon" title="Open source">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
+            '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
+            '</svg></a></div>';
+        }
+        return '<div class="expand-source"><span class="expand-source-text" title="' + escHtml(src) + '">' + escHtml(src.length > 20 ? src.slice(0, 18) + '…' : src) + '</span></div>';
+      }
+
       tbody.innerHTML = rows.map(function(row) {
         var origIdx = incidents.indexOf(row);
         var loc = (row['Location'] || '--');
@@ -775,25 +833,14 @@
           '<td title="' + escHtml(loc) + '">' + escHtml(locShort) + '</td>' +
           '</tr>' +
           '<tr class="expand-row" data-expand-id="' + origIdx + '">' +
-          '<td colspan="4">' +
+          '<td colspan="5">' +
           '<div class="expand-body">' +
-          (content ? '<div class="expand-section"><div class="expand-label">Content</div><div class="expand-text">' + content + '</div></div>' : '<div class="expand-section"><span class="expand-none">No content recorded</span></div>') +
+          '<div class="expand-content">' +
+          (content ? '<div class="expand-label">Content</div><div class="expand-text">' + content + '</div>' : '<span class="expand-none">No content recorded</span>') +
+          '</div>' +
+          sourceHtml(row['Source'] || '') +
           '</div>' +
           '</td>' +
-          (function() {
-            var src = row['Source'] || '';
-            if (!src) return '<td class="expand-source-cell"><div class="expand-source-inner"></div></td>';
-            var isUrl = /^https?:\/\//i.test(src.trim());
-            if (isUrl) {
-              return '<td class="expand-source-cell"><div class="expand-source-inner">' +
-                '<a href="' + escHtml(src.trim()) + '" target="_blank" rel="noopener" class="expand-source-icon" title="Open source">' +
-                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-                '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
-                '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
-                '</svg></a></div></td>';
-            }
-            return '<td class="expand-source-cell"><div class="expand-source-inner"><span class="expand-source-text" title="' + escHtml(src) + '">' + escHtml(src.length > 20 ? src.slice(0,18)+'…' : src) + '</span></div></td>';
-          })() +
           '</tr>';
       }).join('');
 
@@ -807,27 +854,14 @@
           var expandRow = tbody.querySelector('tr.expand-row[data-expand-id="' + id + '"]');
           var isOpen = expandRow.classList.contains('open');
 
-          // Close any other open row first -- an inline max-height (set when
-          // it was opened) would otherwise override the CSS collapse rule and
-          // leave it stuck visually open even after the class is removed.
           tbody.querySelectorAll('tr.expand-row.open').forEach(function(er) {
-            if (er === expandRow) return;
-            var otherBody = er.querySelector('.expand-body');
-            if (otherBody) otherBody.style.maxHeight = '0px';
-            er.classList.remove('open');
+            if (er !== expandRow) closeExpandRow(er);
           });
 
-          var body = expandRow.querySelector('.expand-body');
           if (!isOpen) {
-            expandRow.classList.add('open');
-            // scrollHeight reflects the row's natural open-state height
-            // (padding included, since the 'open' class is already applied)
-            // even while still clipped by max-height:0 -- reading it forces
-            // the layout the transition then animates from.
-            body.style.maxHeight = body.scrollHeight + 'px';
+            openExpandRow(expandRow);
           } else {
-            body.style.maxHeight = '0px';
-            expandRow.classList.remove('open');
+            closeExpandRow(expandRow);
           }
 
           map.flyTo({ center: [lng, lat], zoom: 8, speed: 1.2 });

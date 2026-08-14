@@ -509,43 +509,42 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* ── Expandable rows ─────────────────────────────────────────────────────── */
-/* Always a real row (no display:none) so the height/opacity transitions below
-   can animate smoothly instead of snapping open. */
+/* display:none is the only fully reliable way to guarantee zero footprint
+   when closed (max-height/overflow tricks on their own can leave a residual
+   sliver in some browsers) -- JS toggles this via inline style, switching to
+   table-row only while the row is open or mid-transition. */
+.expand-row { display: none; }
+
 .expand-row td {
   padding: 0;
-  border-bottom: 2px solid transparent;
-  transition: border-color .32s ease;
 }
 
-.expand-row.open td {
-  border-bottom: 2px solid var(--accent);
-}
-
+/* One unified cell (colspan=5) laid out with flexbox internally, instead of
+   a separate icon column -- avoids fighting table-layout:fixed's column
+   widths, which is what made the icon cell balloon to the Location column's
+   width. */
 .expand-body {
-  padding: 0 16px;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   background: var(--surface-2);
+  border-bottom: 2px solid var(--accent);
   display: flex;
-  gap: 24px;
-  transition: max-height .32s cubic-bezier(.4, 0, .2, 1), opacity .22s ease, padding .32s cubic-bezier(.4, 0, .2, 1);
+  align-items: stretch;
+  transition: max-height .32s cubic-bezier(.4, 0, .2, 1), opacity .22s ease;
+  /* max-height is set inline by JS: measured to the content's exact height
+     when opening, then released to 'none' once the transition finishes so
+     later reflows (web font swap, resize, etc.) can never clip it. */
 }
 
 .expand-row.open .expand-body {
-  padding: 12px 16px 14px 16px;
   opacity: 1;
-  /* max-height is set inline by JS to the content's exact scrollHeight,
-     so the slide distance/timing always matches how much content there is. */
 }
 
-.expand-section {
+.expand-content {
   flex: 1;
   min-width: 0;
-}
-
-.expand-section:first-child {
-  flex: 2;
+  padding: 12px 16px 14px 16px;
 }
 
 .expand-label {
@@ -570,35 +569,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-style: italic;
 }
 
-/* Source icon cell */
-.expand-source-cell {
-  width: 60px;
-  min-width: 60px;
-  text-align: center;
-  vertical-align: middle;
-  background: var(--surface-2);
-  padding: 0;
-}
-
-/* max-height/overflow on a <td> itself is unreliable across browsers (table
-   cells size via the table layout algorithm, not the normal box model), so
-   the collapse/expand happens on this inner block div instead -- the cell
-   just sizes to fit whatever height this div actually renders at. */
-.expand-source-inner {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
+/* Source icon, right side of the same flex row -- sized to its own content
+   instead of a table column, so it stays compact. */
+.expand-source {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
-  transition: max-height .32s ease, opacity .22s ease, padding .32s ease;
-}
-
-.expand-row.open .expand-source-inner {
-  max-height: 200px;
-  opacity: 1;
-  padding: 12px 8px;
+  padding: 12px 16px;
   border-left: 1px solid var(--border);
 }
 
@@ -620,6 +598,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: 10px;
   color: var(--text-muted);
   font-family: var(--font-ui);
+  white-space: nowrap;
 }
 
 /* ── Multi-select dropdown ───────────────────────────────────────────────── */
