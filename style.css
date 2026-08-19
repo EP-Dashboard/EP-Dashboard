@@ -417,20 +417,22 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   text-overflow: clip;
 }
 
-/* Per-column widths as percentages (not fixed px) so columns scale with the
-   panel's actual width instead of a hard floor -- widened Target/Tactic/
-   Venue so pill text has room to breathe. table-layout:fixed (set above)
-   keeps these stable regardless of what's in the expand row. */
-#incidentTable th:nth-child(1) { width: 10%; }
-#incidentTable tbody tr.main-row td:nth-child(1) { width: 10%; }
-#incidentTable th:nth-child(2) { width: 19%; }
-#incidentTable tbody tr.main-row td:nth-child(2) { width: 19%; }
-#incidentTable th:nth-child(3) { width: 20%; }
-#incidentTable tbody tr.main-row td:nth-child(3) { width: 20%; }
-#incidentTable th:nth-child(4) { width: 18%; }
-#incidentTable tbody tr.main-row td:nth-child(4) { width: 18%; }
-#incidentTable th:nth-child(5) { width: 33%; }
-#incidentTable tbody tr.main-row td:nth-child(5) { width: 33%; }
+/* Fixed pixel widths for Date/Target/Tactic/Venue -- generous enough to
+   never clip their content regardless of window size. Location is the only
+   flexible column (width: auto): it absorbs whatever space remains and is
+   the one that truncates first on a narrow window, per design -- the other
+   four hold their width and the table scrolls horizontally (see
+   .table-scroll) rather than squeezing them unreadable. */
+#incidentTable th:nth-child(1) { width: 140px; }
+#incidentTable tbody tr.main-row td:nth-child(1) { width: 140px; }
+#incidentTable th:nth-child(2) { width: 160px; }
+#incidentTable tbody tr.main-row td:nth-child(2) { width: 160px; }
+#incidentTable th:nth-child(3) { width: 180px; }
+#incidentTable tbody tr.main-row td:nth-child(3) { width: 180px; }
+#incidentTable th:nth-child(4) { width: 170px; }
+#incidentTable tbody tr.main-row td:nth-child(4) { width: 170px; }
+#incidentTable th:nth-child(5) { width: auto; }
+#incidentTable tbody tr.main-row td:nth-child(5) { width: auto; }
 
 .placeholder-row td {
   color: var(--text-muted);
