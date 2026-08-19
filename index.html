@@ -154,7 +154,7 @@
         </div>
 
         <div class="filter-group filter-search-group">
-          <input type="text" id="filterSearch" class="filter-input filter-search" placeholder="Search…" />
+          <input type="text" id="filterSearch" class="filter-input filter-search" placeholder="Search… (try: judge OR justice)" title="Supports: word OR word, -word to exclude, &quot;exact phrase&quot;" />
         </div>
 
         <button id="filterReset" class="filter-reset" title="Clear all filters">✕</button>
@@ -695,10 +695,50 @@
       return d;
     }
 
+    // ── Boolean search ───────────────────────────────────────────────────
+    // "judge OR justice"        -> matches rows containing either word
+    // "judge threat"            -> matches rows containing BOTH words (AND)
+    // "-settled"                -> excludes rows containing "settled"
+    // "\"written threat\""      -> matches that exact phrase
+    // -word exclusions apply globally across every OR branch, e.g.
+    // "judge OR justice -settled" means (judge OR justice) AND NOT settled.
+    function parseSearchQuery(raw) {
+      var excludeTerms = [];
+      var withoutExcludes = raw.replace(/(^|\s)-("[^"]+"|\S+)/g, function(match, pre, tok) {
+        var t = tok.replace(/^"|"$/g, '').toLowerCase();
+        if (t) excludeTerms.push(t);
+        return pre;
+      });
+
+      var orGroups = withoutExcludes.trim().split(/\s+OR\s+/i).map(function(group) {
+        var terms = [];
+        var re = /"([^"]+)"|(\S+)/g;
+        var m;
+        while ((m = re.exec(group)) !== null) {
+          var token = m[1] !== undefined ? m[1] : m[2];
+          if (token) terms.push(token.toLowerCase());
+        }
+        return terms;
+      }).filter(function(group) { return group.length > 0; });
+
+      return { orGroups: orGroups, excludeTerms: excludeTerms };
+    }
+
+    function matchesSearch(haystack, parsed) {
+      for (var i = 0; i < parsed.excludeTerms.length; i++) {
+        if (haystack.indexOf(parsed.excludeTerms[i]) !== -1) return false;
+      }
+      if (!parsed.orGroups.length) return true;
+      return parsed.orGroups.some(function(group) {
+        return group.every(function(term) { return haystack.indexOf(term) !== -1; });
+      });
+    }
+
     function applyFilters() {
       var dateFrom = document.getElementById('filterDateFrom').value;
       var dateTo   = document.getElementById('filterDateTo').value;
-      var search   = document.getElementById('filterSearch').value.toLowerCase().trim();
+      var searchRaw = document.getElementById('filterSearch').value.trim();
+      var searchParsed = searchRaw ? parseSearchQuery(searchRaw) : null;
 
       var filtered = incidents.filter(function(row) {
         var d = toISO(row['Date'] || '');
@@ -708,9 +748,9 @@
         if (msState.tactic.size > 0 && !msState.tactic.has((row['Tactic']||'').trim())) return false;
         if (msState.venue.size  > 0 && !msState.venue.has((row['Venue']||'').trim()))   return false;
         if (msState.country.size > 0 && !msState.country.has((row['Country']||'').trim())) return false;
-        if (search) {
+        if (searchParsed) {
           var haystack = [row['Content'],row['City'],row['Country'],row['Target'],row['Tactic'],row['Venue']].join(' ').toLowerCase();
-          if (!haystack.includes(search)) return false;
+          if (!matchesSearch(haystack, searchParsed)) return false;
         }
         return true;
       });
