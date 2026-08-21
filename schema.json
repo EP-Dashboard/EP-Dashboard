@@ -100,7 +100,7 @@
       "type": "metrics-builder",
       "id": "builder",
       "label": "Metrics Builder",
-      "$comment": "4th layer tab. Unlike the other three, selecting it replaces BOTH the map and the single metrics chart with one full-height panel (the map/metrics divider is hidden too) -- it is not a map coloring layer. Lets the user build an open-ended grid of charts (2 per row, capped grid with scroll) instead of the single fixed metrics chart. Each chart has its own Chart Type / X Axis / Break Down By selection, chosen from all five categorical fields (Target, Tactic, Venue, Country, Domestic/Int'l) -- a superset of the three the map/metrics chart is restricted to. Y axis is shown as a fixed, disabled 'Count of Incidents' label rather than a real selector, since this dataset has no numeric measure column (unlike SEA's Arms Score) for a Y axis to meaningfully choose between. Charts respect the current table filters (date range, multi-selects, search) and re-render when they change, but only while this panel is actually visible (rebuilding a Chart.js canvas inside a display:none container sizes it to zero). Nothing here persists across a page reload by design -- the grid resets each session.",
+      "$comment": "4th layer tab. Unlike the other three, selecting it replaces BOTH the map and the single metrics chart with one full-height panel (the map/metrics divider is hidden too) -- it is not a map coloring layer. Lets the user build an open-ended grid of charts (2 per row, capped grid with scroll) instead of the single fixed metrics chart. Each chart has its own Chart Type / X Axis / Break Down By selection, chosen from all five categorical fields (Target, Tactic, Venue, Country, Domestic/Int'l) -- a superset of the three the map/metrics chart is restricted to. Y axis is shown as a fixed, disabled 'Count of Incidents' label rather than a real selector, since this dataset has no numeric measure column (unlike SEA's Arms Score) for a Y axis to meaningfully choose between. Each chart snapshots the currently-filtered rows at the moment it's created and keeps using that frozen snapshot (for both its data and its Copy export) regardless of later filter changes -- filtering does NOT auto-update existing charts. A per-chart Refresh icon (stacked below Copy/Delete, top-right of the card) re-snapshots just that one chart against whatever filters are active when clicked. This lets someone lock chart A's numbers in place while adjusting filters to build a different slice of the data for chart B alongside it. Nothing here persists across a page reload by design -- the grid resets each session.",
       "chartTypes": [
         { "value": "vbar", "label": "Vertical Bar", "breakdownAllowed": false },
         { "value": "hbar", "label": "Horizontal Bar", "breakdownAllowed": false },
@@ -110,7 +110,7 @@
       ],
       "xAxisOptions": ["Target", "Tactic", "Venue", "Country", "Domestic/Int'l"],
       "yAxis": "Count of Incidents (fixed -- no numeric measure column exists in this dataset)",
-      "cardActions": ["Copy (icon, top-right)", "Delete (icon, top-right)"],
+      "cardActions": ["Copy (icon, top-right)", "Delete (icon, top-right)", "Refresh (icon, top-right -- re-snapshots this chart's data against current filters)"],
       "gridLayout": "2 columns, wraps/scrolls beyond that"
     }
   ],

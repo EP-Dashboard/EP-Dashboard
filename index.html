@@ -755,12 +755,15 @@
         return true;
       });
 
-      // Update table/metrics/builder charts first, unconditionally -- these
-      // must never be blocked by anything map-related.
+      // Update table/metrics first, unconditionally -- these must never be
+      // blocked by anything map-related. Builder charts are intentionally
+      // NOT touched here -- each one holds its own frozen data snapshot,
+      // only updated when its own Refresh button is clicked (see
+      // refreshOneBuilderChart), so filtering doesn't disturb a chart
+      // someone is using to illustrate a specific slice of the data.
       currentFilteredRows = filtered;
       renderTable(filtered);
       renderMetrics(filtered);
-      refreshBuilderCharts();
 
       // Skip touching the map entirely while its container is hidden behind
       // the Metrics Builder panel (display:none) -- MapLibre can misbehave
@@ -1151,6 +1154,7 @@
     var COPY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     var CHECK_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
     var DELETE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    var REFRESH_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
 
     // Shared by the metrics panel's Copy button and every Metrics Builder
     // card's Copy button.
@@ -1286,28 +1290,36 @@
         '<div class="builder-card-actions">' +
           '<button type="button" class="metrics-copy-btn builder-copy-btn" data-id="' + cfg.id + '" title="Copy chart image to clipboard">' + COPY_ICON + '</button>' +
           '<button type="button" class="metrics-copy-btn builder-delete-btn" data-id="' + cfg.id + '" title="Delete chart">' + DELETE_ICON + '</button>' +
+          '<button type="button" class="metrics-copy-btn builder-refresh-btn" data-id="' + cfg.id + '" title="Refresh with current filters">' + REFRESH_ICON + '</button>' +
         '</div>' +
         '<div class="metrics-card-header"><span class="metrics-card-title">' + escHtml(builderChartTitle(cfg)) + '</span></div>' +
         '<div class="metrics-chart-wrap metrics-chart-wrap-full"><canvas id="builderCanvas-' + cfg.id + '"></canvas></div>' +
       '</div>';
     }
 
-    // Adds one new chart: appends its card + creates its Chart.js instance.
+    // Adds one new chart: snapshots the currently-filtered rows into cfg.rows
+    // (frozen -- filter changes afterward do NOT touch this chart, only its
+    // own Refresh button does), then appends its card + creates its instance.
     // Existing cards/instances are left completely untouched.
     function addBuilderCard(cfg) {
+      cfg.rows = currentFilteredRows.slice();
+
       var grid = document.getElementById('builderGrid');
       document.getElementById('builderEmpty').style.display = 'none';
       grid.insertAdjacentHTML('beforeend', builderCardHtml(cfg));
 
       var canvas = document.getElementById('builderCanvas-' + cfg.id);
-      var spec = buildBuilderSpec(currentFilteredRows, cfg);
+      var spec = buildBuilderSpec(cfg.rows, cfg);
       cfg.chartInstance = new Chart(canvas, { type: spec.chartType, data: spec.data, options: buildChartOptions(spec, 'dark') });
 
       var copyBtn = grid.querySelector('.builder-copy-btn[data-id="' + cfg.id + '"]');
-      copyBtn.addEventListener('click', function() { copyChartSpec(buildBuilderSpec(currentFilteredRows, cfg), copyBtn); });
+      copyBtn.addEventListener('click', function() { copyChartSpec(buildBuilderSpec(cfg.rows, cfg), copyBtn); });
 
       var delBtn = grid.querySelector('.builder-delete-btn[data-id="' + cfg.id + '"]');
       delBtn.addEventListener('click', function() { removeBuilderCard(cfg.id); });
+
+      var refreshBtn = grid.querySelector('.builder-refresh-btn[data-id="' + cfg.id + '"]');
+      refreshBtn.addEventListener('click', function() { refreshOneBuilderChart(cfg, refreshBtn); });
     }
 
     // Removes exactly one chart: destroys its instance and its card only.
@@ -1322,24 +1334,29 @@
       if (!builderCharts.length) document.getElementById('builderEmpty').style.display = '';
     }
 
-    // Called on every filter change, regardless of which tab is active.
-    // Updates each existing chart's data in place (no destroy/recreate, no
-    // DOM rebuild) -- fast even with several charts, and safe to call while
-    // the builder panel is hidden (Chart.js just updates its data model;
-    // the canvas repaints once the container is visible again).
-    function refreshBuilderCharts() {
-      builderCharts.forEach(function(cfg) {
-        if (!cfg.chartInstance) return;
-        var spec = buildBuilderSpec(currentFilteredRows, cfg);
-        cfg.chartInstance.data = spec.data;
-        cfg.chartInstance.update('none');
-      });
+    // Re-snapshots this one chart's rows against whatever filters are active
+    // right now, and updates just this chart's data in place. Every other
+    // chart in the grid is left completely untouched -- this is what lets
+    // someone freeze chart A's numbers while tweaking filters to build a
+    // different slice of the data for chart B.
+    function refreshOneBuilderChart(cfg, btn) {
+      cfg.rows = currentFilteredRows.slice();
+      if (!cfg.chartInstance) return;
+      var spec = buildBuilderSpec(cfg.rows, cfg);
+      cfg.chartInstance.data = spec.data;
+      cfg.chartInstance.update('none');
+
+      if (btn) {
+        btn.innerHTML = CHECK_ICON;
+        setTimeout(function() { btn.innerHTML = REFRESH_ICON; }, 900);
+      }
     }
 
-    // Called when the Metrics Builder tab becomes active: charts' data is
-    // already current (kept in sync live by refreshBuilderCharts), they just
-    // need an explicit resize now that their container has real dimensions
-    // again after being display:none.
+    // Called when the Metrics Builder tab becomes active: chart data doesn't
+    // change on its own anymore (each chart holds its own frozen snapshot,
+    // only touched by its own Refresh button), they just need an explicit
+    // resize now that their container has real dimensions again after being
+    // display:none.
     function resizeBuilderCharts() {
       builderCharts.forEach(function(cfg) { if (cfg.chartInstance) cfg.chartInstance.resize(); });
     }
@@ -1352,7 +1369,7 @@
       var breakKey = breakGroupVisible ? document.getElementById('builderBreak').value : 'none';
 
       builderIdCounter++;
-      var cfg = { id: builderIdCounter, type: type, xKey: xKey, breakKey: breakKey, chartInstance: null };
+      var cfg = { id: builderIdCounter, type: type, xKey: xKey, breakKey: breakKey, chartInstance: null, rows: null };
       builderCharts.push(cfg);
       addBuilderCard(cfg);
     });
