@@ -1421,9 +1421,42 @@
       var divider = document.getElementById('divider');
       var layout  = divider.closest('.layout');
       var dragging = false;
+      var userAdjustedSplit = false;
+
+      // Smaller screens (laptops) get less map/graph room and more table
+      // room by default, since the table's fixed-width columns need more
+      // horizontal space to avoid clipping/scrolling than the map/metrics
+      // panel does. Only applies at >=900px (below that the layout stacks
+      // into rows instead, per the CSS media query, so a column split
+      // doesn't apply). Re-evaluated on window resize -- e.g. undocking a
+      // laptop from an external monitor -- but only until the user manually
+      // drags the divider themselves, at which point their choice sticks.
+      function defaultLeftPct(width) {
+        if (width < 900) return null;
+        if (width < 1100) return 32;
+        if (width < 1440) return 38;
+        return 50;
+      }
+
+      function applySmartDefaultSplit() {
+        if (userAdjustedSplit) return;
+        var pct = defaultLeftPct(window.innerWidth);
+        if (pct === null) return;
+        layout.style.gridTemplateColumns = pct + '% 8px 1fr';
+        map.resize();
+      }
+
+      applySmartDefaultSplit();
+
+      var resizeTimer = null;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(applySmartDefaultSplit, 150);
+      });
 
       divider.addEventListener('mousedown', function(e) {
         dragging = true;
+        userAdjustedSplit = true;
         divider.classList.add('dragging');
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
@@ -1438,7 +1471,7 @@
         leftW = Math.max(260, Math.min(leftW, total - 260));
         var pct = (leftW / rect.width * 100).toFixed(2);
         layout.style.gridTemplateColumns = pct + '% 8px 1fr';
-        if (window.map) map.resize();
+        map.resize();
       });
 
       document.addEventListener('mouseup', function() {
@@ -1447,7 +1480,7 @@
         divider.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        if (window.map) map.resize();
+        map.resize();
       });
     })();
 
@@ -1474,7 +1507,7 @@
         topH = Math.max(120, Math.min(topH, total - 120));
         var pct = (topH / rect.height * 100).toFixed(2);
         mapSection.style.flex = '0 0 ' + pct + '%';
-        if (window.map) map.resize();
+        map.resize();
       });
 
       document.addEventListener('mouseup', function() {
@@ -1483,7 +1516,7 @@
         vDivider.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        if (window.map) map.resize();
+        map.resize();
       });
     })();
   </script>

@@ -494,6 +494,25 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 #incidentTable th:nth-child(5) { width: auto; }
 #incidentTable tbody tr.main-row td:nth-child(5) { width: auto; }
 
+/* Laptop-range screens: compact the table so all 5 columns fit comfortably
+   without needing horizontal scroll or a heavily-dragged divider. Paired
+   with the JS-driven default map/table split (see the resize script) which
+   also gives the table more room to start with on these sizes. */
+@media (max-width: 1440px) {
+  #incidentTable thead th { padding: 7px 8px; font-size: 9.5px; }
+  #incidentTable tbody td { padding: 6px 8px; }
+  .type-badge { font-size: 9px; padding: 1px 6px; }
+
+  #incidentTable th:nth-child(1) { width: 105px; }
+  #incidentTable tbody tr.main-row td:nth-child(1) { width: 105px; }
+  #incidentTable th:nth-child(2) { width: 125px; }
+  #incidentTable tbody tr.main-row td:nth-child(2) { width: 125px; }
+  #incidentTable th:nth-child(3) { width: 145px; }
+  #incidentTable tbody tr.main-row td:nth-child(3) { width: 145px; }
+  #incidentTable th:nth-child(4) { width: 130px; }
+  #incidentTable tbody tr.main-row td:nth-child(4) { width: 130px; }
+}
+
 .placeholder-row td {
   color: var(--text-muted);
   font-style: italic;
