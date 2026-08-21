@@ -482,15 +482,22 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
    flexible column (width: auto): it absorbs whatever space remains and is
    the one that truncates first on a narrow window, per design -- the other
    four hold their width and the table scrolls horizontally (see
-   .table-scroll) rather than squeezing them unreadable. */
+   .table-scroll) rather than squeezing them unreadable.
+
+   Target/Tactic/Venue share ONE uniform width rather than three different
+   ones: whichever of the three is the active map layer shows colored pills
+   that fill their full cell width (see .type-badge), so all three columns
+   need to be wide enough for the single longest label across all of them
+   ("Communication Channels", a Venue value) -- otherwise pills would look
+   uniform in one layer but get clipped/different-sized in another. */
 #incidentTable th:nth-child(1) { width: 140px; }
 #incidentTable tbody tr.main-row td:nth-child(1) { width: 140px; }
-#incidentTable th:nth-child(2) { width: 160px; }
-#incidentTable tbody tr.main-row td:nth-child(2) { width: 160px; }
-#incidentTable th:nth-child(3) { width: 180px; }
-#incidentTable tbody tr.main-row td:nth-child(3) { width: 180px; }
-#incidentTable th:nth-child(4) { width: 170px; }
-#incidentTable tbody tr.main-row td:nth-child(4) { width: 170px; }
+#incidentTable th:nth-child(2) { width: 210px; }
+#incidentTable tbody tr.main-row td:nth-child(2) { width: 210px; }
+#incidentTable th:nth-child(3) { width: 210px; }
+#incidentTable tbody tr.main-row td:nth-child(3) { width: 210px; }
+#incidentTable th:nth-child(4) { width: 210px; }
+#incidentTable tbody tr.main-row td:nth-child(4) { width: 210px; }
 #incidentTable th:nth-child(5) { width: auto; }
 #incidentTable tbody tr.main-row td:nth-child(5) { width: auto; }
 
@@ -504,6 +511,7 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 /* ── Type badge ──────────────────────────────────────────────────────────── */
 .type-badge {
   display: inline-block;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   padding: 2px 7px;
@@ -513,6 +521,7 @@ table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   letter-spacing: .05em;
   font-weight: 500;
   text-transform: uppercase;
+  text-align: left;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
