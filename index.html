@@ -483,6 +483,8 @@
 
     // ── LEGEND ────────────────────────────────────────────────────────────
     var activeLegendValues = new Set();
+    var legendMinimized = false;
+    var MINIMIZE_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
     function buildLegend() {
       var field = LAYER_FIELD[activeLayer];
@@ -493,8 +495,24 @@
     }
 
     function renderLegend(field, colorMap, values) {
+      var legend = document.getElementById('mapLegend');
+
+      if (legendMinimized) {
+        legend.classList.add('collapsed');
+        legend.innerHTML = '<button type="button" class="legend-expand-btn" id="legendExpandBtn">View Legend</button>';
+        document.getElementById('legendExpandBtn').addEventListener('click', function() {
+          legendMinimized = false;
+          buildLegend();
+        });
+        return;
+      }
+
+      legend.classList.remove('collapsed');
       var allActive = activeLegendValues.size === values.length;
-      var html = '<div class="legend-title">' + LAYER_LABEL[activeLayer] + '</div>';
+      var html = '<div class="legend-header">' +
+        '<div class="legend-title">' + LAYER_LABEL[activeLayer] + '</div>' +
+        '<button type="button" class="legend-minimize-btn" id="legendMinimizeBtn" title="Minimize legend">' + MINIMIZE_ICON + '</button>' +
+        '</div>';
       values.sort().forEach(function(val) {
         var color = colorMap[val] || DEFAULT_COLOR;
         var active = activeLegendValues.has(val);
@@ -508,8 +526,12 @@
           '<span id="legendResetFilter" style="font-family:var(--font-ui);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer;">Show all</span>' +
           '</div>';
       }
-      var legend = document.getElementById('mapLegend');
       legend.innerHTML = html;
+
+      document.getElementById('legendMinimizeBtn').addEventListener('click', function() {
+        legendMinimized = true;
+        buildLegend();
+      });
 
       legend.querySelectorAll('.inc-legend-row').forEach(function(row) {
         row.addEventListener('click', function() {
